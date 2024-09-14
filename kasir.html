@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   
+    <title>Kasir Pintar</title>
+    <link rel="stylesheet" href="kasir.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
+   <header class="header">
+            <input class="menu-btn" type="checkbox" id="menu-btn" />
+            <label class="menu-icon" for="menu-btn"><span class="navicon"></span></label>
+            <ul class="menu">
+                <li><a href="kasir.html">KASIR</a></li>
+                <li><a href="laporan.html">LAPORAN</a></li>
+                <li><a href="void.html"> VOID</a></li>
+                <li><a href="setoran.html">SETORAN</a></li>
+                <li> <a href="akun.html">AKUN</a></li>
+            </ul>
+        </header> 
+    
+</head>
+<body>
+    
+    <div id="login">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username"><br>
+        <input type="password" id="password" placeholder="Password"><br>
+        <button onclick="login()">Login</button>
+    </div>
+    <div id="app" style="display:none;">
+  
+        <h2>Input Barang</h2>
+        <input type="text" id="kodeBarang" placeholder="Kode Barang">
+        <input type="text" id="namaBarang" placeholder="Nama Barang">
+        <input type="number" id="hargaBeli" placeholder="Harga Beli">
+        <input type="number" id="hargaJual" placeholder="Harga Jual">
+        <input type="number" id="stokBarang" placeholder="Stok Barang">
+        <input type="text" id="kodeToko" placeholder="Kode Toko">
+        <button onclick="tambahBarang()">Tambah Barang</button>
+
+        <h2>Daftar Barang</h2>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Kode</th>
+                    <th>Nama</th>
+                    <th>Harga Jual</th>
+                    <th>Stok</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="tabelBarang">
+                <!-- Contoh data, nantinya akan diisi dengan JavaScript -->
+              
+            </tbody>
+        </table>
+
+        <h2>Tambah ke Keranjang</h2>
+        <input type="text" id="kodeNamaBarang" placeholder="Kode/Nama Barang">
+        <input type="number" id="jumlahBarang" placeholder="Jumlah">
+        <button onclick="tambahKeKeranjang()">Tambah ke Keranjang</button>
+
+        <h2>Keranjang</h2>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Nama</th>
+                    <th>Jumlah</th>
+                    <th>Harga</th>
+                    <th>Total</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="tabelKeranjang"></tbody>
+        </table>
+        <h3>Total: Rp<span id="totalKeranjang"></span></h3>
+        <button onclick="bayar()">Bayar</button>
+        <button onclick="lihatLaporan()">Lihat Laporan</button>
+            <button onclick="downloadExcel()">Download Excel</button>
+
+        <div id="popupVoid" class="popup" style="display:none;">
+            <div class="popup-content">
+                <span onclick="tutupPopup()" class="close">&times;</span>
+                <h2>Verifikasi Void</h2>
+                <input type="password" id="pinVoid" placeholder="Masukkan PIN"><br>
+                <button onclick="verifikasiVoid()">Verifikasi</button>
+                <p id="voidCode" style="display:none;">Kode Void: <span id="generatedVoidCode"></span></p>
+                <input type="text" id="inputVoidCode" placeholder="Masukkan Kode Void" style="display:none;"><br>
+                <button onclick="prosesVoid()" style="display:none;">Proses Void</button>
+            </div>
+        </div>
+
+        <div id="popup" class="popup">
+            <div class="popup-content">
+                <span onclick="tutupPopup()" class="close">&times;</span>
+                <h2>Metode Pembayaran</h2>
+                <button onclick="pilihMetode('cash')">Cash</button>
+               <button onclick="pilihMetode('qris')">QRIS</button>
+
+                <div id="metodeCash" style="display:none;">
+                    <h3>Total: Rp<span id="totalBayar"></span></h3>
+                    <input type="number" id="nominalCash" placeholder="Masukkan nominal">
+                    <h3>Kembalian: Rp<span id="kembalian"></span></h3>
+                    <button onclick="prosesPembayaran('cash')">Proses</button>
+                </div>
+
+                <div id="metodeQRIS" style="display:none;">
+                    <h3>Total: Rp<span id="totalBayarQRIS"></span></h3>
+                    <img src="qr.png" width="200" height="200" alt="QR Code">
+                    <label><input type="checkbox" id="checkbox"> Saya setuju dengan transaksi ini</label><br>
+                    <button onclick="prosesPembayaran('qris')">Proses</button>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="logout()">Logout</button> 
+    </div>
+   
+<div id="download-animation" style="display: none;">
+    <div class="spinner"></div>
+    <p>Mengunduh data, mohon tunggu...</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

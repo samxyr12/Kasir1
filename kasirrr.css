@@ -1,0 +1,211 @@
+/* kasir.css */
+
+/* Reset beberapa style default */
+body, h2, h3, table, input, button {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    color: #343a40;
+    line-height: 1.6;
+}
+
+/* Styling untuk login form */
+#login {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    color: #fff;
+}
+
+#login h2 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+}
+
+#login input {
+    margin-bottom: 15px;
+    padding: 15px;
+    width: 100%;
+    max-width: 400px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+#login button {
+    padding: 15px;
+    width: 100%;
+    max-width: 400px;
+    border: none;
+    background-color: #28a745;
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: background-color 0.3s ease;
+}
+
+#login button:hover {
+    background-color: #218838;
+}
+
+/* Styling untuk aplikasi utama */
+#app {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Styling untuk section heading */
+h2 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    color: #007bff;
+}
+
+h3 {
+    font-size: 1.4rem;
+    margin-bottom: 15px;
+}
+
+/* Styling untuk input fields */
+input[type="text"], input[type="number"] {
+    padding: 15px;
+    margin-bottom: 15px;
+    width: calc(100% - 32px);
+    border: 2px solid #ced4da;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield; /* Untuk menghilangkan spinner pada input number */
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Styling untuk tombol */
+button {
+    padding: 15px;
+    border: none;
+    background-color: #007bff;
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* Styling untuk tabel */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+table, th, td {
+    border: 1px solid #dee2e6;
+}
+
+th, td {
+    padding: 15px;
+    text-align: left;
+}
+
+thead {
+    background-color: #e9ecef;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+tbody tr:hover {
+    background-color: #e9ecef;
+}
+
+/* Styling untuk tombol aksi di tabel */
+.action-buttons button {
+    margin: 0 5px;
+    font-size: 1.2rem;
+}
+
+/* Styling untuk popup */
+.popup {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.popup-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+.popup-content h2 {
+    margin-bottom: 20px;
+    font-size: 1.6rem;
+    color: #007bff;
+}
+
+.popup-content button {
+    width: 100%;
+    margin: 10px 0;
+}
+
+.popup-content .close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 24px;
+    color: #343a40;
+    cursor: pointer;
+}
+
+.popup-content .close:hover {
+    color: #007bff;
+}
+
+.popup-content img {
+    display: block;
+    margin: 20px auto;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+}
+
+/* Styling untuk total dan kembalian */
+#totalKeranjang, #totalBayar, #totalBayarQRIS, #kembalian {
+    font-weight: bold;
+    font-size: 1.4rem;
+}

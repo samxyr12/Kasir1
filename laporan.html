@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Laporan Transaksi dan Setoran</title>
+    <link rel="stylesheet" href="laporan.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  
+    <style>
+        /* CSS untuk spinner */
+        .spinner {
+            display: none;
+            border: 8px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 8px solid #3498db;
+            width: 50px;
+            height: 50px;
+            animation: spin 2s linear infinite;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999; /* Pastikan spinner berada di atas konten lainnya */
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* CSS untuk membuat seluruh halaman menjadi blur kecuali spinner */
+        .blur {
+            filter: blur(5px);
+            transition: filter 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <input class="menu-btn" type="checkbox" id="menu-btn" />
+        <label class="menu-icon" for="menu-btn"><span class="navicon"></span></label>
+        <ul class="menu">
+            <li><a href="kasir.html">KASIR</a></li>
+            <li><a href="laporan.html">LAPORAN</a></li>
+            <li><a href="void.html">VOID</a></li>
+            <li><a href="setoran.html">SETORAN</a></li>
+            <li><a href="akun.html">Akun</a></li>
+        </ul>
+    </header>
+
+    <div id="spinner" class="spinner"></div> <!-- Spinner tetap di luar wrapper -->
+    <div id="wrapper"> <!-- Wrapper tanpa class blur saat halaman dimuat -->
+        <div id="app">
+            <div id="notificationIcon">
+                <i class="fas fa-bell"></i>
+                <span id="notificationBadge">!</span>
+            </div>
+            <div id="popup">
+                <div id="popupContent"></div>
+                <input type="text" id="nomorWA" placeholder="Masukkan nomor WA">
+                <button onclick="kirimKeWA()">Kirim ke WA</button>
+                <button onclick="downloadTxt()">Download TXT</button>
+                <button onclick="tutupPopup()">Tutup</button>
+            </div>
+
+            <h2>Laporan Transaksi</h2>
+            <label for="filterBulan">Filter berdasarkan Bulan:</label>
+            <input type="month" id="filterBulan">
+            <button onclick="filterLaporan()">Filter</button>
+            <button onclick="downloadExcelByMonth()">Download Laporan Bulan Ini</button>
+
+            <label for="filterTahun">Filter berdasarkan Tahun:</label>
+            <input type="number" id="filterTahun" placeholder="Tahun">
+            <button onclick="filterLaporan()">Filter</button>
+
+            <label for="cariIdTransaksi">Cari berdasarkan ID Transaksi:</label>
+            <input type="text" id="cariIdTransaksi" placeholder="ID Transaksi">
+            <button onclick="cariTransaksi()">Cari</button>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID Transaksi</th>
+                        <th>Kode Barang</th>
+                        <th>Nama Barang</th>
+                        <th>Jumlah</th>
+                        <th>Total</th>
+                        <th>Nominal</th>
+                        <th>Kembalian</th>
+                        <th>Metode</th>
+                        <th>Tanggal</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelLaporan"></tbody>
+            </table>
+
+            <div class="total-section">
+                <div class="total-item">
+                    <h3>Total Transaksi:</h3>
+                    <span id="totalTransaksi"></span>
+                </div>
+                <div class="total-item">
+                    <h3>Total Pendapatan:</h3>
+                    <span id="totalPendapatan"></span>
+                </div>
+                <div class="total-item">
+                    <h3>Total Keuntungan:</h3>
+                    <span id="totalKeuntungan"></span>
+                </div>
+                <div class="total-item">
+                    <h3>Jumlah Barang Terjual:</h3>
+                    <span id="totalJumlahBarang"></span>
+                </div>
+            </div>
+
+            <button onclick="downloadExcel()">Download Excel</button>
+
+            <h2>Setoran Harian</h2>
+            <label for="tanggalSetoran">Pilih Tanggal:</label>
+            <input type="date" id="tanggalSetoran">
+            <button onclick="hitungSetoran()">Hitung Setoran</button>
+            <div id="setoran" style="display:none;">
+                <h3>Nominal Setoran untuk Tanggal: <span id="tanggalSetoranTerpilih"></span></h3>
+                <input type="number" id="nominalSetoran" placeholder="Masukkan Nominal Setoran">
+                <button onclick="simpanSetoran()">Simpan Setoran</button>
+                <div class="status-setoran">
+                    <h3>Status: <span id="statusSetoran"></span></h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <script>
+        let transaksiTerbaru = null;
+
+function formatRupiah(angka, prefix = 'Rp') {
+    let number_string = angka.toString().replace(/[^,\d]/g, '');
+    let split = number_string.split(',');
+    let sisa = split[0].length % 3;
+    let rupiah = split[0].substr(0, sisa);
+    let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+    if (ribuan) {
+        let separator = sisa ? '.' : '';
+        rupiah += separator + ribuan.join('.');
+    }
+
+    rupiah = split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
+    return prefix === undefined ? rupiah : (rupiah ? prefix + ' ' + rupiah : '');
+}
+
+function checkLogin() {
+    const loggedIn = localStorage.getItem('loggedIn');
+    if (loggedIn !== 'true') {
+        window.location.href = 'login.html';
+    }
+}
+
+function logout() {
+    localStorage.removeItem('loggedIn');
+    localStorage.removeItem('username');
+    localStorage.setItem('loginAttempts', JSON.stringify({}));
+    window.location.href = 'login.html';
+}
+
+window.onload = () => {
+    checkLogin();
+    loadLaporan();
+    periksaTransaksiTerbaru();
+};
+
+function loadLaporan() {
+    let transaksi = JSON.parse(localStorage.getItem('transaksi')) || [];
+    tampilkanLaporan(transaksi.reverse());
+}
+
+function filterLaporan() {
+    let transaksi = JSON.parse(localStorage.getItem('transaksi')) || [];
+    const filterBulan = document.getElementById('filterBulan').value;
+    const filterTahun = document.getElementById('filterTahun').value;
+
+    let filteredTransaksi = transaksi;
+
+    if (filterBulan) {
+        filteredTransaksi = filteredTransaksi.filter(item => {
+            const date = new Date(item.tanggal);
+            return date.getFullYear() === parseInt(filterBulan.split('-')[0]) &&
+                   date.getMonth() + 1 === parseInt(filterBulan.split('-')[1]);
+        });
+    }
+    if (filterTahun) {
+        filteredTransaksi = filteredTransaksi.filter(item => new Date(item.tanggal).getFullYear() === parseInt(filterTahun));
+    }
+
+    tampilkanLaporan(filteredTransaksi.reverse());
+}
+
+function cariTransaksi() {
+    let transaksi = JSON.parse(localStorage.getItem('transaksi')) || [];
+    const idTransaksi = document.getElementById('cariIdTransaksi').value;
+
+    if (idTransaksi) {
+        let filteredTransaksi = transaksi.filter(item => item.id.toLowerCase().includes(idTransaksi.toLowerCase()));
+        tampilkanLaporan(filteredTransaksi.reverse());
+    } else {
+        alert('Masukkan ID Transaksi untuk mencari');
+    }
+}
+
+function tampilkanLaporan(transaksi) {
+    const tabelLaporan = document.getElementById('tabelLaporan');
+    tabelLaporan.innerHTML = '';
+
+    let totalTransaksi = 0;
+    let totalPendapatan = 0;
+    let totalKeuntungan = 0;
+    let totalJumlahBarang = 0;
+
+    transaksi.forEach((item) => {
+        const row = tabelLaporan.insertRow();
+        row.insertCell(0).innerText = item.id.toUpperCase();
+        row.insertCell(1).innerText = item.kodeBarang.toUpperCase();
+        row.insertCell(2).innerText = item.namaBarang.toUpperCase();
+        row.insertCell(3).innerText = item.jumlah;
+        row.insertCell(4).innerText = formatRupiah(item.total);
+        row.insertCell(5).innerText = formatRupiah(item.nominal);
+        row.insertCell(6).innerText = formatRupiah(item.kembalian);
+        row.insertCell(7).innerText = item.metode.toUpperCase();
+        row.insertCell(8).innerText = item.tanggal.toUpperCase();
+
+        totalTransaksi += 1;
+        totalPendapatan += item.total;
+        let barang = JSON.parse(localStorage.getItem('barang')) || [];
+        let barangItem = barang.find(b => b.kode.toUpperCase() === item.kodeBarang.toUpperCase());
+        if (barangItem) {
+            totalKeuntungan += (item.total - barangItem.hargaBeli * item.jumlah);
+        }
+        totalJumlahBarang += item.jumlah;
+    });
+
+    document.getElementById('totalTransaksi').innerText = totalTransaksi;
+    document.getElementById('totalPendapatan').innerText = formatRupiah(totalPendapatan);
+    document.getElementById('totalKeuntungan').innerText = formatRupiah(totalKeuntungan);
+    document.getElementById('totalJumlahBarang').innerText = totalJumlahBarang;
+}
+
+function showSpinner() {
+            document.getElementById('spinner').style.display = 'block';
+            document.getElementById('wrapper').classList.add('blur'); // Tambahkan efek blur ke wrapper konten
+        }
+
+        function hideSpinner() {
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('wrapper').classList.remove('blur'); // Hapus efek blur dari wrapper konten
+        }
+
+function downloadExcel() {
+    let transaksi = JSON.parse(localStorage.getItem('transaksi')) || [];
+    if (transaksi.length === 0) {
+        alert('Tidak ada data transaksi untuk diunduh.');
+        return;
+    }
+
+    showSpinner();  // Tampilkan animasi
+
+    // Simulasi waktu untuk animasi sebelum download
+    setTimeout(() => {
+        // Proses download yang sebenarnya
+        const columns = [
+            { header: "ID Transaksi", key: "id", width: 20 },
+            { header: "Kode Barang", key: "kodeBarang", width: 20 },
+            { header: "Nama Barang", key: "namaBarang", width: 30 },
+            { header: "Jumlah", key: "jumlah", width: 10 },
+            { header: "Total", key: "total", width: 20 },
+            { header: "Nominal", key: "nominal", width: 20 },
+            { header: "Kembalian", key: "kembalian", width: 20 },
+            { header: "Metode", key: "metode", width: 20 },
+            { header: "Tanggal", key: "tanggal", width: 20 }
+        ];
+
+        const worksheet = XLSX.utils.json_to_sheet(transaksi, { header: columns.map(col => col.key) });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan');
+        XLSX.writeFile(workbook, 'LaporanTransaksi.xlsx');
+
+        hideSpinner();  // Sembunyikan animasi setelah download selesai
+    }, 5000); // Ganti angka ini sesuai durasi animasi yang diinginkan (ms)
+}
+
+
+function downloadExcelByMonth() {
+    let transaksi = JSON.parse(localStorage.getItem('transaksi')) || [];
+    const filterBulan = document.getElementById('filterBulan').value;
+
+    if (!filterBulan) {
+        alert('Pilih bulan terlebih dahulu untuk mendownload laporan bulanan.');
+        return;
+    }
+
+    let filteredTransaksi = transaksi.filter(item => {
+        const date = new Date(item.tanggal);
+        return date.getFullYear() === parseInt(filterBulan.split('-')[0]) &&
+               date.getMonth() + 1 === parseInt(filterBulan.split('-')[1]);
+    });
+
+    if (filteredTransaksi.length === 0) {
+        alert('Tidak ada data transaksi untuk bulan yang dipilih.');
+        return;
+    }
+
+    showSpinner();  // Tampilkan animasi
+
+    setTimeout(() => {
+        const worksheet = XLSX.utils.json_to_sheet(filteredTransaksi);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Bulanan');
+        XLSX.writeFile(workbook, 'LaporanBulanan.xlsx');
+
+        hideSpinner();  // Sembunyikan animasi setelah download selesai
+    }, 8000); // Durasi waktu untuk simulasi animasi
+}
+
+function downloadExcelByMonth() {
+    let transaksi = JSON.parse(localStorage.getItem('transaksi')) || [];
+    const filterBulan = document.getElementById('filterBulan').value;
+
+    if (!filterBulan) {
+        alert('Pilih bulan terlebih dahulu untuk mendownload laporan bulanan.');
+        return;
+    }
+
+    let filteredTransaksi = transaksi.filter(item => {
+        const date = new Date(item.tanggal);
+        return date.getFullYear() === parseInt(filterBulan.split('-')[0]) &&
+               date.getMonth() + 1 === parseInt(filterBulan.split('-')[1]);
+    });
+
+    if (filteredTransaksi.length === 0) {
+        alert('Tidak ada data transaksi untuk bulan yang dipilih.');
+        return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(filteredTransaksi);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Bulanan');
+
+    XLSX.writeFile(workbook, 'LaporanBulanan.xlsx');
+}
+
+function hitungSetoran() {
+    const tanggalSetoran = document.getElementById('tanggalSetoran').value;
+    if (!tanggalSetoran) {
+        alert('Silakan pilih tanggal setoran');
+        return;
+    }
+
+    const transaksi = JSON.parse(localStorage.getItem('transaksi')) || [];
+    const transaksiTanggal = transaksi.filter(item => item.tanggal === tanggalSetoran);
+
+    if (transaksiTanggal.length === 0) {
+        alert('Tidak ada transaksi untuk tanggal yang dipilih');
+        return;
+    }
+
+    const totalPendapatanTanggal = transaksiTanggal.reduce((total, item) => total + item.total, 0);
+    document.getElementById('tanggalSetoranTerpilih').innerText = tanggalSetoran;
+    document.getElementById('nominalSetoran').value = totalPendapatanTanggal;
+    document.getElementById('setoran').style.display = 'block';
+}
+
+function simpanSetoran() {
+    const tanggalSetoran = document.getElementById('tanggalSetoran').value;
+    const nominalSetoran = parseFloat(document.getElementById('nominalSetoran').value);
+    const transaksi = JSON.parse(localStorage.getItem('transaksi')) || [];
+    const transaksiTanggal = transaksi.filter(item => item.tanggal === tanggalSetoran);
+
+    const totalPendapatanTanggal = transaksiTanggal.reduce((total, item) => total + item.total, 0);
+    let statusSetoran, varianSetoran;
+
+    if (nominalSetoran < totalPendapatanTanggal) {
+        statusSetoran = 'Minus';
+        varianSetoran = totalPendapatanTanggal - nominalSetoran;
+    } else if (nominalSetoran > totalPendapatanTanggal) {
+        statusSetoran = 'Plus';
+        varianSetoran = nominalSetoran - totalPendapatanTanggal;
+    } else {
+        statusSetoran = 'Tepat';
+        varianSetoran = 0;
+    }
+
+    // Ambil laporan setoran yang ada
+    const laporanSetoran = JSON.parse(localStorage.getItem('laporanSetoran')) || [];
+
+    // Cek apakah ada setoran sebelumnya pada tanggal yang sama
+    const setoranTanggalSama = laporanSetoran.filter(item => item.tanggal === tanggalSetoran);
+    let urutanSetoran = '';
+
+    if (setoranTanggalSama.length > 0) {
+        // Jika sudah ada setoran, beri peringatan dan tentukan urutan
+        alert('Tanggal yang dipilih sudah ada setoran. Setoran ini akan ditandai sebagai setoran tambahan.');
+
+        // Tentukan urutan setoran
+        urutanSetoran = `. =$${setoranTanggalSama.length + 1}`;
+    } else {
+        urutanSetoran = '';
+    }
+
+    // Tambahkan laporan setoran baru
+    laporanSetoran.push({
+        username: localStorage.getItem('username'),
+        tanggal: tanggalSetoran,
+        waktu: new Date().toLocaleString() + urutanSetoran, // Tambahkan urutan ke waktu
+        nominalSetoran: nominalSetoran,
+        status: statusSetoran,
+        varian: varianSetoran
+    });
+
+    localStorage.setItem('laporanSetoran', JSON.stringify(laporanSetoran));
+    document.getElementById('statusSetoran').innerText = `${statusSetoran} (${formatRupiah(varianSetoran)})`;
+}
+
+// Fungsi untuk memformat angka sebagai rupiah
+function formatRupiah(angka) {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(angka);
+}
+
+function periksaTransaksiTerbaru() {
+    let transaksi = JSON.parse(localStorage.getItem('transaksi')) || [];
+    if (transaksi.length > 0) {
+        transaksiTerbaru = transaksi[transaksi.length - 1];
+        document.getElementById('notificationBadge').style.display = 'inline';
+    }
+}
+
+document.getElementById('notificationIcon').addEventListener('click', () => {
+    if (transaksiTerbaru) {
+        tampilkanPopup(transaksiTerbaru);
+    }
+});
+
+function tampilkanPopup(transaksi) {
+    const popupContent = document.getElementById('popupContent');
+    popupContent.innerHTML = `
+        <p>ID Transaksi: ${transaksi.id.toUpperCase()}</p>
+        <p>Kode Barang: ${transaksi.kodeBarang.toUpperCase()}</p>
+        <p>Nama Barang: ${transaksi.namaBarang.toUpperCase()}</p>
+        <p>Jumlah: ${transaksi.jumlah}</p>
+        <p>Total: ${formatRupiah(transaksi.total)}</p>
+        <p>Nominal: ${formatRupiah(transaksi.nominal)}</p>
+        <p>Kembalian: ${formatRupiah(transaksi.kembalian)}</p>
+        <p>Metode: ${transaksi.metode.toUpperCase()}</p>
+        <p>Tanggal: ${transaksi.tanggal.toUpperCase()}</p>
+    `;
+    document.getElementById('popup').style.display = 'block';
+    document.getElementById('notificationBadge').style.display = 'none';
+}
+
+function tutupPopup() {
+    document.getElementById('popup').style.display = 'none';
+    transaksiTerbaru = null;
+}
+
+function kirimKeWA() {
+    const nomorWA = document.getElementById('nomorWA').value;
+    if (!nomorWA) {
+        alert('Masukkan nomor WA.');
+        return;
+    }
+
+    const transaksi = transaksiTerbaru;
+    const pesan = `
+ID TRANSAKSI: ${transaksi.id.toUpperCase()}
+KODE BARANG: ${transaksi.kodeBarang.toUpperCase()}
+NAMA BARANG: ${transaksi.namaBarang.toUpperCase()}
+JUMLAH: ${transaksi.jumlah}
+TOTAL: ${formatRupiah(transaksi.total)}
+NOMINAL: ${formatRupiah(transaksi.nominal)}
+KEMBALIAN: ${formatRupiah(transaksi.kembalian)}
+METODE: ${transaksi.metode.toUpperCase()}
+TANGGAL: ${transaksi.tanggal.toUpperCase()}
+`;
+
+    const url = `https://wa.me/${nomorWA}?text=${encodeURIComponent(pesan.trim())}`;
+    window.open(url, '_blank');
+}
+
+function downloadTxt() {
+    const transaksi = transaksiTerbaru;
+    const data = `
+        ID Transaksi: ${transaksi.id.toUpperCase()}
+        Kode Barang: ${transaksi.kodeBarang.toUpperCase()}
+        Nama Barang: ${transaksi.namaBarang.toUpperCase()}
+        Jumlah: ${transaksi.jumlah}
+        Total: ${formatRupiah(transaksi.total)}
+        Nominal: ${formatRupiah(transaksi.nominal)}
+        Kembalian: ${formatRupiah(transaksi.kembalian)}
+        Metode: ${transaksi.metode.toUpperCase()}
+        Tanggal: ${transaksi.tanggal.toUpperCase()}
+    `;
+
+    const blob = new Blob([data], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Transaksi_${transaksi.id.toUpperCase()}.txt`;
+    link.click();
+}
+
+function formatRupiah(angka, prefix = 'Rp') {
+    if (angka == null) return ''; // Jika angka null atau undefined, kembalikan string kosong
+    let number_string = angka.toString().replace(/[^,\d]/g, '');
+    let split = number_string.split(',');
+    let sisa = split[0].length % 3;
+    let rupiah = split[0].substr(0, sisa);
+    let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+    if (ribuan) {
+        let separator = sisa ? '.' : '';
+        rupiah += separator + ribuan.join('.');
+    }
+
+    rupiah = split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
+    return prefix === undefined ? rupiah : (rupiah ? prefix + ' ' + rupiah : '');
+}
+    </script>
+</body>
+</html>
